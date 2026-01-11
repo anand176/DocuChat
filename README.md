@@ -177,6 +177,12 @@ retriever = vector_store.as_retriever(
 ## License
 
 This project is open source and available for personal and educational use.
+## Images
+
+
+<img width="901" height="563" alt="image" src="https://github.com/user-attachments/assets/131e156c-c602-451f-a92c-f07a39f2f829" />
+<img width="863" height="564" alt="image" src="https://github.com/user-attachments/assets/65e33596-8c94-4e7e-948d-2a3d102e0999" />
+
 
 ## Contributing
 
