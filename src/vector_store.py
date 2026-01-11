@@ -166,3 +166,122 @@ def add_texts(texts: List[str], metadatas: Optional[List[Dict]] = None):
 def add_documents_to_vector_store(texts: List[str], metadatas: Optional[List[Dict]] = None):
     """Alias for add_texts (for compatibility)"""
     add_texts(texts, metadatas)
+
+def delete_vectors_by_source(source: str) -> int:
+    """Delete all vectors with a specific source
+    
+    Args:
+        source: Source name (e.g., filename) to delete
+        
+    Returns:
+        Number of vectors deleted
+    """
+    index = get_index()
+    
+    # Query to find all vectors with this source
+    # Note: We need to query to find the IDs first, then delete
+    # Pinecone doesn't support delete by metadata filter directly in all plans
+    
+    # Use query to find vectors (we'll query with a dummy vector and filter)
+    # Since we can't easily query all, we'll use fetch to get all and filter
+    # Actually, better approach: use delete by metadata filter if available
+    
+    # Query first to find all vectors with this source, then delete by IDs
+    # This is more reliable than delete by filter (which may not be supported in all plans)
+    embeddings_model = get_embeddings_model()
+    dummy_vector = embeddings_model.encode("cricket").tolist()
+    
+    # Query with metadata filter to find matching vectors
+    results = index.query(
+        vector=dummy_vector,
+        top_k=10000,  # Large number to get all matching vectors
+        filter={"source": source},
+        include_metadata=True
+    )
+    
+    if results.matches:
+        vector_ids = [match.id for match in results.matches]
+        # Delete in batches (Pinecone recommends batches of 1000)
+        batch_size = 1000
+        deleted = 0
+        for i in range(0, len(vector_ids), batch_size):
+            batch_ids = vector_ids[i:i + batch_size]
+            index.delete(ids=batch_ids)
+            deleted += len(batch_ids)
+        return deleted
+    return 0
+
+def list_all_sources() -> List[Dict]:
+    """List all unique sources (files) in the vector store
+    
+    Returns:
+        List of dictionaries with source info and count
+    """
+    index = get_index()
+    
+    # Use fetch to get all vectors (limited to first batch)
+    # Actually, better: use stats to get total count, then query samples
+    # For simplicity, we'll query with a dummy vector and get unique sources
+    embeddings_model = get_embeddings_model()
+    dummy_vector = embeddings_model.encode("cricket").tolist()
+    
+    # Query to get a sample of vectors
+    results = index.query(
+        vector=dummy_vector,
+        top_k=1000,  # Get a large sample
+        include_metadata=True
+    )
+    
+    # Extract unique sources
+    sources = {}
+    if results.matches:
+        for match in results.matches:
+            source = match.metadata.get("source", "Unknown")
+            file_type = match.metadata.get("file_type", "text")
+            file_name = match.metadata.get("file_name", source)
+            
+            if source not in sources:
+                sources[source] = {
+                    "source": source,
+                    "file_name": file_name,
+                    "file_type": file_type,
+                    "count": 0
+                }
+            sources[source]["count"] += 1
+    
+    return list(sources.values())
+
+def list_vectors_by_source(source: str, limit: int = 100) -> List[Dict]:
+    """List vectors from a specific source
+    
+    Args:
+        source: Source name to filter by
+        limit: Maximum number of vectors to return
+        
+    Returns:
+        List of vector dictionaries with metadata
+    """
+    index = get_index()
+    embeddings_model = get_embeddings_model()
+    
+    # Query with metadata filter
+    dummy_vector = embeddings_model.encode("cricket").tolist()
+    
+    results = index.query(
+        vector=dummy_vector,
+        top_k=limit,
+        filter={"source": source},
+        include_metadata=True
+    )
+    
+    vectors = []
+    if results.matches:
+        for match in results.matches:
+            vectors.append({
+                "id": match.id,
+                "text": match.metadata.get("text", "")[:200],  # Preview
+                "metadata": match.metadata,
+                "score": match.score
+            })
+    
+    return vectors

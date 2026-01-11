@@ -1,5 +1,8 @@
 """Utility functions for loading and processing cricket data"""
 from typing import List
+import io
+from pypdf import PdfReader
+from docx import Document as DocxDocument
 
 def split_text_into_chunks(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[str]:
     """Split text into chunks with overlap"""
@@ -40,6 +43,82 @@ def load_cricket_data_from_file(file_path: str) -> List[dict]:
     
     metadata = {"source": file_path}
     return load_cricket_data_from_text(content, metadata)
+
+def extract_text_from_pdf(file_content: bytes, filename: str = "uploaded.pdf") -> str:
+    """Extract text from PDF file content"""
+    try:
+        pdf_file = io.BytesIO(file_content)
+        reader = PdfReader(pdf_file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+        return text.strip()
+    except Exception as e:
+        raise ValueError(f"Error reading PDF: {str(e)}")
+
+def extract_text_from_docx(file_content: bytes, filename: str = "uploaded.docx") -> str:
+    """Extract text from DOCX file content"""
+    try:
+        docx_file = io.BytesIO(file_content)
+        doc = DocxDocument(docx_file)
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return text.strip()
+    except Exception as e:
+        raise ValueError(f"Error reading DOCX: {str(e)}")
+
+def extract_text_from_txt(file_content: bytes, filename: str = "uploaded.txt") -> str:
+    """Extract text from TXT file content"""
+    try:
+        text = file_content.decode('utf-8')
+        return text.strip()
+    except UnicodeDecodeError:
+        # Try other encodings
+        try:
+            text = file_content.decode('latin-1')
+            return text.strip()
+        except Exception as e:
+            raise ValueError(f"Error reading text file: {str(e)}")
+
+def process_uploaded_file(file_content: bytes, filename: str, file_type: str = None) -> List[dict]:
+    """Process uploaded file and return chunks
+    
+    Args:
+        file_content: Binary content of the file
+        filename: Name of the file
+        file_type: File type (pdf, docx, txt). If None, inferred from filename
+    
+    Returns:
+        List of dictionaries with 'text' and 'metadata' keys
+    """
+    # Determine file type
+    if file_type is None:
+        file_ext = filename.lower().split('.')[-1] if '.' in filename else ''
+        file_type = file_ext
+    
+    # Extract text based on file type
+    if file_type == 'pdf':
+        text = extract_text_from_pdf(file_content, filename)
+    elif file_type in ['docx', 'doc']:
+        text = extract_text_from_docx(file_content, filename)
+    elif file_type in ['txt', 'text']:
+        text = extract_text_from_txt(file_content, filename)
+    else:
+        raise ValueError(f"Unsupported file type: {file_type}. Supported: pdf, docx, txt")
+    
+    if not text or len(text.strip()) < 10:
+        raise ValueError("File appears to be empty or contains too little text")
+    
+    # Create metadata
+    metadata = {
+        "source": filename,
+        "file_type": file_type,
+        "file_name": filename
+    }
+    
+    # Split into chunks
+    return load_cricket_data_from_text(text, metadata)
 
 def get_sample_cricket_data() -> str:
     """Return sample cricket knowledge for testing"""

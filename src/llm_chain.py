@@ -50,7 +50,7 @@ def generate_response(question: str, chat_history: list = None) -> dict:
     
     # Create prompt
     prompt = f"""You are a helpful cricket knowledge assistant. Use the following pieces of context to answer the user's question about cricket.
-If you don't know the answer based on the provided context, just say that you don't know, don't try to make up an answer.
+If you don't know the answer based on the provided context, try to answer using your own way.
 Be concise and informative in your responses.
 
 Context:
