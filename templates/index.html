@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuChat</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 DocuChat</h1>
+            <p>Ask me anything about your documents!</p>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('chat', event)">Chat</button>
+                <button class="tab-btn" onclick="switchTab('knowledge', event)">Knowledge Base</button>
+            </div>
+        </div>
+
+        <!-- Chat Tab -->
+        <div id="chatTab" class="tab-content active">
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-message bot-message">
+                    <div class="message-content">
+                        <p>Hello! I'm DocuChat, your document knowledge assistant. Upload your documents and ask me
+                            anything about them!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <form id="chatForm" onsubmit="sendMessage(event)">
+                    <input type="text" id="userInput" placeholder="Type your question about your documents..."
+                        autocomplete="off" required>
+                    <button type="submit" id="sendButton">Send</button>
+                </form>
+            </div>
+
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <span>Thinking...</span>
+            </div>
+        </div>
+
+        <!-- Knowledge Base Tab -->
+        <div id="knowledgeTab" class="tab-content">
+            <div class="knowledge-container">
+                <div class="upload-section">
+                    <h2>📄 Upload Document</h2>
+                    <p class="upload-hint">Upload PDF, DOCX, or TXT files to add to the knowledge base</p>
+                    <form id="uploadForm" onsubmit="uploadDocument(event)">
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt" required>
+                            <label for="fileInput" class="file-label">Choose File</label>
+                            <span id="fileName" class="file-name">No file chosen</span>
+                        </div>
+                        <button type="submit" id="uploadButton" class="upload-btn">Upload</button>
+                    </form>
+                    <div id="uploadStatus" class="status-message"></div>
+                </div>
+
+                <div class="documents-section">
+                    <h2>📚 Documents in Knowledge Base</h2>
+                    <button onclick="loadDocuments()" class="refresh-btn">🔄 Refresh</button>
+                    <div id="documentsList" class="documents-list">
+                        <div class="loading-text">Loading documents...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chatHistory = [];
+
+        // Tab switching
+        function switchTab(tab, event) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Fallback: activate by index
+                const buttons = document.querySelectorAll('.tab-btn');
+                buttons[tab === 'chat' ? 0 : 1].classList.add('active');
+            }
+
+            // Update tab content
+            document.getElementById('chatTab').classList.toggle('active', tab === 'chat');
+            document.getElementById('knowledgeTab').classList.toggle('active', tab === 'knowledge');
+
+            // Load documents when switching to knowledge tab
+            if (tab === 'knowledge') {
+                loadDocuments();
+            }
+        }
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', function (e) {
+            const fileName = e.target.files[0]?.name || 'No file chosen';
+            document.getElementById('fileName').textContent = fileName;
+        });
+
+        // Chat functions
+        async function sendMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            input.value = '';
+            addMessage(message, 'user');
+
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('sendButton').disabled = true;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: chatHistory
+                    })
+                });
+
+                const data = await response.json();
+                addMessage(data.response, 'bot');
+                chatHistory.push([message, data.response]);
+
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('sendButton').disabled = false;
+                input.focus();
+            }
+        }
+
+        function addMessage(message, sender) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            const p = document.createElement('p');
+            p.textContent = message;
+            contentDiv.appendChild(p);
+
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Upload document
+        async function uploadDocument(event) {
+            event.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showStatus('uploadStatus', 'Please select a file', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadButton = document.getElementById('uploadButton');
+            uploadButton.disabled = true;
+            uploadButton.textContent = 'Uploading...';
+
+            showStatus('uploadStatus', 'Uploading file...', 'info');
+
+            try {
+                const response = await fetch('/add_document', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showStatus('uploadStatus', `✅ ${data.message}`, 'success');
+                    fileInput.value = '';
+                    document.getElementById('fileName').textContent = 'No file chosen';
+                    loadDocuments(); // Refresh document list
+                } else {
+                    showStatus('uploadStatus', `❌ Error: ${data.detail || 'Upload failed'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('uploadStatus', '❌ Error uploading file. Please try again.', 'error');
+            } finally {
+                uploadButton.disabled = false;
+                uploadButton.textContent = 'Upload';
+            }
+        }
+
+        // Load documents list
+        async function loadDocuments() {
+            const documentsList = document.getElementById('documentsList');
+            documentsList.innerHTML = '<div class="loading-text">Loading documents...</div>';
+
+            try {
+                const response = await fetch('/list_documents');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    if (data.documents.length === 0) {
+                        documentsList.innerHTML = '<div class="empty-message">No documents in knowledge base yet. Upload a file to get started!</div>';
+                    } else {
+                        documentsList.innerHTML = data.documents.map(doc => `
+                            <div class="document-item">
+                                <div class="document-info">
+                                    <span class="document-name">${doc.file_name || doc.source}</span>
+                                    <span class="document-type">${doc.file_type || 'text'}</span>
+                                    <span class="document-count">${doc.count} chunks</span>
+                                </div>
+                                <button onclick="deleteDocument('${doc.source}')" class="delete-btn">Delete</button>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    documentsList.innerHTML = '<div class="error-message">Error loading documents</div>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                documentsList.innerHTML = '<div class="error-message">Error loading documents. Please try again.</div>';
+            }
+        }
+
+        // Delete document
+        async function deleteDocument(source) {
+            if (!confirm(`Are you sure you want to delete "${source}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/delete_document/${encodeURIComponent(source)}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert(`✅ ${data.message}`);
+                    loadDocuments(); // Refresh list
+                } else {
+                    alert(`❌ Error: ${data.detail || 'Delete failed'}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error deleting document. Please try again.');
+            }
+        }
+
+        // Show status message
+        function showStatus(elementId, message, type) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusEl.textContent = '';
+                    statusEl.className = 'status-message';
+                }, 5000);
+            }
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('userInput')?.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Load documents on page load if on knowledge tab
+        window.addEventListener('load', function () {
+            if (document.getElementById('knowledgeTab').classList.contains('active')) {
+                loadDocuments();
+            }
+        });
+    </script>
+</body>
+
+</html>
