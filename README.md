@@ -1,4 +1,4 @@
-# 🏏 Cricket Chatbot
+#  Cricket Chatbot
 
 A smart cricket knowledge chatbot built with FastAPI, Pinecone vector database, Google Gemini LLM, and LangChain. This chatbot can answer questions about cricket using RAG (Retrieval Augmented Generation) capabilities.
 
