@@ -2,7 +2,6 @@
 from typing import List, Dict, Any
 
 def format_chat_history(history: List[List[str]]) -> List[tuple]:
-    """Format chat history for LangChain"""
     formatted = []
     for human_msg, ai_msg in history:
         formatted.append(("human", human_msg))
