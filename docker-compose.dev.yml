@@ -1,0 +1,48 @@
+# Development docker-compose with hot reload
+version: '3.8'
+
+services:
+  # Backend FastAPI service with hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: docuchat-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-gcp-starter}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-cricket-chatbot}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    env_file:
+      - .env
+    networks:
+      - docuchat-network
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  # Frontend React service with Vite dev server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: docuchat-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - docuchat-network
+    restart: unless-stopped
+
+networks:
+  docuchat-network:
+    driver: bridge

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Backend FastAPI service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: docuchat-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    # environment:
+    #   - PINECONE_API_KEY=${PINECONE_API_KEY}
+    #   - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-gcp-starter}
+    #   - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-cricket-chatbot}
+    #   - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    env_file:
+      - "backend/.env"
+    networks:
+      - docuchat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Frontend React service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: docuchat-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - docuchat-network
+    restart: unless-stopped
+
+networks:
+  docuchat-network:
+    driver: bridge

@@ -1,7 +1,6 @@
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 from typing import List, Optional
@@ -9,17 +8,22 @@ import uvicorn
 from pydantic import BaseModel
 
 from src.vector_store import get_vector_store, init_pinecone, add_texts, delete_vectors_by_source, list_all_sources
-from src.llm_chain import get_conversational_chain
+from src.llm_chain import get_conversational_chain, generate_response_stream
 from src.data_loader import process_uploaded_file
 
 # Load environment variables
 load_dotenv()
 
-app = FastAPI(title="Cricket Chatbot", version="1.0.0")
+app = FastAPI(title="DocuChat API", version="1.0.0")
 
-# Mount static files and templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+# CORS middleware for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev servers
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Lazy initialization flag
 _pinecone_initialized = False
@@ -45,11 +49,6 @@ class ChatMessage(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     sources: Optional[List[str]] = []
-
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    """Serve the main chat interface"""
-    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(message: ChatMessage):
@@ -97,6 +96,29 @@ async def chat_endpoint(message: ChatMessage):
             response=f"An error occurred: {str(e)}. Please check your API keys and configuration.",
             sources=[]
         )
+
+@app.post("/chat_stream")
+async def chat_stream_endpoint(message: ChatMessage):
+    """Handle chat messages and return a streaming response"""
+    global _pinecone_initialized
+    
+    if not _pinecone_initialized:
+        try:
+            init_pinecone()
+            _pinecone_initialized = True
+        except Exception as e:
+            # Yield error if initialization fails
+            def error_gen():
+                yield f"Error: Vector store not initialized: {str(e)}"
+            return StreamingResponse(error_gen(), media_type="text/plain")
+    
+    # Convert history format
+    history_tuples = [(h, a) for h, a in message.history] if message.history else []
+    
+    return StreamingResponse(
+        generate_response_stream(message.message, history_tuples),
+        media_type="text/plain"
+    )
 
 @app.post("/add_document")
 async def add_document(file: UploadFile = File(...)):
@@ -211,7 +233,7 @@ async def list_documents():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "cricket-chatbot"}
+    return {"status": "healthy", "service": "docuchat-api"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
