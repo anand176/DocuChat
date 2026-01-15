@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendChatMessage } from '../services/api';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { streamChatMessage } from '../services/api';
 
 interface Message {
     text: string;
@@ -37,13 +39,25 @@ const ChatInterface: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await sendChatMessage(userMessage, chatHistory);
+            // Initial empty bot message for streaming
+            setMessages((prev) => [...prev, { text: '', sender: 'bot' }]);
 
-            // Add bot response
-            setMessages((prev) => [...prev, { text: response.response, sender: 'bot' }]);
+            let fullResponse = '';
+            for await (const chunk of streamChatMessage(userMessage, chatHistory)) {
+                fullResponse += chunk;
+                // Update the last message (the bot's streaming message)
+                setMessages((prev) => {
+                    const newMessages = [...prev];
+                    newMessages[newMessages.length - 1] = {
+                        text: fullResponse,
+                        sender: 'bot'
+                    };
+                    return newMessages;
+                });
+            }
 
-            // Update chat history
-            setChatHistory((prev) => [...prev, [userMessage, response.response]]);
+            // Update chat history after full response is received
+            setChatHistory((prev) => [...prev, [userMessage, fullResponse]]);
         } catch (error) {
             console.error('Error:', error);
             setMessages((prev) => [
@@ -61,7 +75,13 @@ const ChatInterface: React.FC = () => {
                 {messages.map((message, index) => (
                     <div key={index} className={`chat-message ${message.sender}-message`}>
                         <div className="message-content">
-                            <p>{message.text}</p>
+                            {message.sender === 'bot' ? (
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {message.text}
+                                </ReactMarkdown>
+                            ) : (
+                                <p>{message.text}</p>
+                            )}
                         </div>
                     </div>
                 ))}

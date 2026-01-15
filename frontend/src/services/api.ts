@@ -55,6 +55,33 @@ export const sendChatMessage = async (message: string, history: string[][] = [])
   return response.json();
 };
 
+// Streaming Chat endpoint
+export async function* streamChatMessage(message: string, history: string[][] = []): AsyncGenerator<string> {
+  const response = await fetch(`${API_BASE_URL}/chat_stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message, history }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to start stream');
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('Response body is null');
+  }
+
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    yield decoder.decode(value, { stream: true });
+  }
+}
+
 // Upload document
 export const uploadDocument = async (file: File): Promise<UploadResponse> => {
   const formData = new FormData();

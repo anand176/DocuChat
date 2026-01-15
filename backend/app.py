@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -8,7 +8,7 @@ import uvicorn
 from pydantic import BaseModel
 
 from src.vector_store import get_vector_store, init_pinecone, add_texts, delete_vectors_by_source, list_all_sources
-from src.llm_chain import get_conversational_chain
+from src.llm_chain import get_conversational_chain, generate_response_stream
 from src.data_loader import process_uploaded_file
 
 # Load environment variables
@@ -96,6 +96,29 @@ async def chat_endpoint(message: ChatMessage):
             response=f"An error occurred: {str(e)}. Please check your API keys and configuration.",
             sources=[]
         )
+
+@app.post("/chat_stream")
+async def chat_stream_endpoint(message: ChatMessage):
+    """Handle chat messages and return a streaming response"""
+    global _pinecone_initialized
+    
+    if not _pinecone_initialized:
+        try:
+            init_pinecone()
+            _pinecone_initialized = True
+        except Exception as e:
+            # Yield error if initialization fails
+            def error_gen():
+                yield f"Error: Vector store not initialized: {str(e)}"
+            return StreamingResponse(error_gen(), media_type="text/plain")
+    
+    # Convert history format
+    history_tuples = [(h, a) for h, a in message.history] if message.history else []
+    
+    return StreamingResponse(
+        generate_response_stream(message.message, history_tuples),
+        media_type="text/plain"
+    )
 
 @app.post("/add_document")
 async def add_document(file: UploadFile = File(...)):

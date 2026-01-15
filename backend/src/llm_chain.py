@@ -76,6 +76,41 @@ Assistant:"""
         "sources": list(set(sources))
     }
 
+def generate_response_stream(question: str, chat_history: list = None):
+    """Generator for Gemini streaming response with RAG"""
+    # Get relevant context from Pinecone
+    context_docs = query_vectors(question, top_k=3)
+    
+    # Combine context
+    context_text = "\n\n".join([doc["text"] for doc in context_docs])
+    
+    # Format chat history
+    history_text = format_chat_history(chat_history) if chat_history else "None"
+    
+    # Create prompt
+    prompt = f"""You are a helpful cricket knowledge assistant. Use the following pieces of context to answer the user's question about cricket.
+If you don't know the answer based on the provided context, try to answer using your own way.
+Be concise and informative in your responses.
+
+Context:
+{context_text}
+
+Chat History:
+{history_text}
+
+Human: {question}
+Assistant:"""
+    
+    # Get Gemini model
+    model = get_gemini_model()
+    
+    # Generate streaming response
+    response = model.generate_content(prompt, stream=True)
+    
+    for chunk in response:
+        if chunk.text:
+            yield chunk.text
+
 def get_conversational_chain(chat_history=None):
     """Compatibility function - returns a callable object
     
