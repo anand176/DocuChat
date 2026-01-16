@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import ChatInterface from './components/ChatInterface';
 import KnowledgeBase from './components/KnowledgeBase';
+import MonitoringDashboard from './components/MonitoringDashboard';
 import './App.css';
 
-type Tab = 'chat' | 'knowledge';
+type Tab = 'chat' | 'knowledge' | 'monitoring';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
@@ -12,7 +13,7 @@ function App() {
     <div className="container">
       <div className="header">
         <h1>💬 DocuChat</h1>
-        <p>Ask me anything about your documents!</p>
+        <p>Your Document Assistant & System Monitoring Hub</p>
         <div className="tabs">
           <button
             className={`tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
@@ -26,10 +27,18 @@ function App() {
           >
             Knowledge Base
           </button>
+          <button
+            className={`tab-btn ${activeTab === 'monitoring' ? 'active' : ''}`}
+            onClick={() => setActiveTab('monitoring')}
+          >
+            🛡️ Monitoring
+          </button>
         </div>
       </div>
 
-      {activeTab === 'chat' ? <ChatInterface /> : <KnowledgeBase />}
+      {activeTab === 'chat' && <ChatInterface />}
+      {activeTab === 'knowledge' && <KnowledgeBase />}
+      {activeTab === 'monitoring' && <MonitoringDashboard />}
     </div>
   );
 }
