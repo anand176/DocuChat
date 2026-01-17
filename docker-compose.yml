@@ -45,6 +45,85 @@ services:
       - docuchat-network
     restart: unless-stopped
 
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: docuchat-postgres
+    environment:
+      POSTGRES_USER: docuchat
+      POSTGRES_PASSWORD: docuchat123
+      POSTGRES_DB: docuchat_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - docuchat-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docuchat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Loki - Log aggregation system
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: docuchat-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./backend/src/config/config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - docuchat-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: docuchat-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./backend/src/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - docuchat-network
+    restart: unless-stopped
+
+  # Alloy - Log and metrics collection agent
+  alloy:
+    image: grafana/alloy:v1.0.0
+    container_name: docuchat-alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./backend/src/config/config.alloy:/etc/alloy/config.alloy
+      - ./logs:/temp/logs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+    depends_on:
+      - loki
+      - prometheus
+    networks:
+      - docuchat-network
+    restart: unless-stopped
+
 networks:
   docuchat-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  loki_data:
+  prometheus_data:
