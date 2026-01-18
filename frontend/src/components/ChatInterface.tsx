@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { streamChatMessage } from '../services/api';
+import { sendLogMonitoring } from '../services/api';
 
 interface Message {
     text: string;
@@ -11,13 +11,13 @@ interface Message {
 const ChatInterface: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([
         {
-            text: "Hello! I'm DocuChat, your document knowledge assistant. Upload your documents and ask me anything about them!",
+            text: "Hello! I'm your Log Monitoring assistant. Ask me about system logs, anomalies, or potential issues!",
             sender: 'bot',
         },
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [chatHistory, setChatHistory] = useState<string[][]>([]);
+    const [sessionId, setSessionId] = useState<string | undefined>(undefined);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -39,30 +39,24 @@ const ChatInterface: React.FC = () => {
         setLoading(true);
 
         try {
-            // Initial empty bot message for streaming
-            setMessages((prev) => [...prev, { text: '', sender: 'bot' }]);
+            // Call log monitoring endpoint
+            const result = await sendLogMonitoring(userMessage, 'default_user', sessionId);
 
-            let fullResponse = '';
-            for await (const chunk of streamChatMessage(userMessage, chatHistory)) {
-                fullResponse += chunk;
-                // Update the last message (the bot's streaming message)
-                setMessages((prev) => {
-                    const newMessages = [...prev];
-                    newMessages[newMessages.length - 1] = {
-                        text: fullResponse,
-                        sender: 'bot'
-                    };
-                    return newMessages;
-                });
+            // Add bot response
+            setMessages((prev) => [
+                ...prev,
+                { text: result.response, sender: 'bot' }
+            ]);
+
+            // Save session ID for continuity
+            if (result.session_id) {
+                setSessionId(result.session_id);
             }
-
-            // Update chat history after full response is received
-            setChatHistory((prev) => [...prev, [userMessage, fullResponse]]);
         } catch (error) {
             console.error('Error:', error);
             setMessages((prev) => [
                 ...prev,
-                { text: 'Sorry, I encountered an error. Please try again.', sender: 'bot' },
+                { text: 'Sorry, I encountered an error while analyzing the logs. Please try again.', sender: 'bot' },
             ]);
         } finally {
             setLoading(false);
@@ -93,7 +87,7 @@ const ChatInterface: React.FC = () => {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Type your question about your documents..."
+                        placeholder="Ask about system logs, anomalies, or issues..."
                         disabled={loading}
                         autoComplete="off"
                     />

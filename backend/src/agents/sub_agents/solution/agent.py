@@ -1,7 +1,7 @@
 """Solution Agent configuration"""
 import google.genai.types as genai_types
-from src.agents1.sub_agents.solution import prompt, tools
-from src.core.config import config
+from agents.sub_agents.solution import prompt, tools
+from core.config import config
 from google.adk.agents import Agent
 
 solution_agent = Agent(

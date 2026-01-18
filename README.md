@@ -1,4 +1,4 @@
-# DocuChat 🚀
+# Docuchat 🚀
 
 A modern document knowledge chatbot built with **React**, **FastAPI**, **Pinecone** vector database, and **Google Gemini** LLM. Upload your documents and ask questions about them using RAG (Retrieval Augmented Generation).
 
@@ -41,7 +41,7 @@ A modern document knowledge chatbot built with **React**, **FastAPI**, **Pinecon
 ### 1. Clone and Setup
 
 ```bash
-cd Cricket-Chatbot
+cd Docuchat
 ```
 
 ### 2. Configure Environment Variables
@@ -79,7 +79,7 @@ docker-compose -f docker-compose.dev.yml up --build
 ## 📁 Project Structure
 
 ```
-Cricket-Chatbot/
+Docuchat/
 ├── backend/                    # FastAPI backend
 │   ├── app.py                 # Main FastAPI application
 │   ├── requirements.txt       # Python dependencies

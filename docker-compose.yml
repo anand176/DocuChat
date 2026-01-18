@@ -15,7 +15,7 @@ services:
     # environment:
     #   - PINECONE_API_KEY=${PINECONE_API_KEY}
     #   - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-gcp-starter}
-    #   - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-cricket-chatbot}
+    #   - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-docuchat}
     #   - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     env_file:
       - "backend/.env"
@@ -119,6 +119,26 @@ services:
       - docuchat-network
     restart: unless-stopped
 
+  # Grafana - Visualization dashboard
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: docuchat-grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./backend/src/config/grafana_datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    depends_on:
+      - loki
+      - prometheus
+    networks:
+      - docuchat-network
+    restart: unless-stopped
+
 networks:
   docuchat-network:
     driver: bridge
@@ -127,3 +147,4 @@ volumes:
   postgres_data:
   loki_data:
   prometheus_data:
+  grafana_data:

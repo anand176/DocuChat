@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import the agents router
-from agents1.backend import router as agents_router
+from agents.backend import router as agents_router
 
 app = FastAPI(title="Log Monitoring API", version="1.0.0")
 

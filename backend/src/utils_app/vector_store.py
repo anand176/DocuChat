@@ -25,7 +25,7 @@ def init_pinecone():
     
     api_key = os.getenv("PINECONE_API_KEY")
     environment = os.getenv("PINECONE_ENVIRONMENT", "gcp-starter")
-    index_name = os.getenv("PINECONE_INDEX_NAME", "cricket-chatbot")
+    index_name = os.getenv("PINECONE_INDEX_NAME", "docuchat")
     
     if not api_key:
         raise ValueError("PINECONE_API_KEY environment variable is not set")

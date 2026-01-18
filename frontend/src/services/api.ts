@@ -11,6 +11,18 @@ export interface ChatResponse {
   sources?: string[];
 }
 
+export interface LogMonitoringRequest {
+  query: string;
+  user_id: string;
+  session_id?: string;
+}
+
+export interface LogMonitoringResponse {
+  status: string;
+  response: string;
+  session_id: string;
+}
+
 export interface DocumentInfo {
   source: string;
   file_name: string;
@@ -50,6 +62,23 @@ export const sendChatMessage = async (message: string, history: string[][] = [])
 
   if (!response.ok) {
     throw new Error('Failed to send message');
+  }
+
+  return response.json();
+};
+
+// Log Monitoring endpoint
+export const sendLogMonitoring = async (query: string, user_id: string, session_id?: string): Promise<LogMonitoringResponse> => {
+  const response = await fetch(`${API_BASE_URL}/agents/log_monitoring`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, user_id, session_id }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch log monitoring response');
   }
 
   return response.json();

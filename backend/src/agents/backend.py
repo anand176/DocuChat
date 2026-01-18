@@ -23,11 +23,11 @@ async def log_monitoring(req: LogMonitoringRequest):
     logger.info(f"Log monitoring request: {req.query}")
     
     try:
-        from agent_runner import handle_agent_request
-        from agent import log_monitoring_agent
+        from agents.agent_runner import handle_agent_request
+        from agents.agent import log_monitoring_agent
         
         # Use the agent runner with proper session management
-        response = await handle_agent_request(
+        response, actual_session_id = await handle_agent_request(
             user_id=req.user_id,
             query=req.query,
             agent=log_monitoring_agent,
@@ -38,7 +38,7 @@ async def log_monitoring(req: LogMonitoringRequest):
         return {
             "status": "success",
             "response": response,
-            "session_id": req.session_id,
+            "session_id": actual_session_id
         }
         
     except Exception as e:

@@ -1,7 +1,7 @@
 """Tools for solution agent"""
 from typing import Dict, List
-from src.utils_app.logger import get_service_logger
-from src.agents1.sub_agents.solution.utils import (
+from utils_app.logger import get_service_logger
+from agents.sub_agents.solution.utils import (
     format_solution_response,
     get_solution_for_pattern
 )

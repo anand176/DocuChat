@@ -17,7 +17,7 @@ from google.adk.plugins.save_files_as_artifacts_plugin import SaveFilesAsArtifac
 from google.adk.runners import Runner
 from google.adk.sessions import DatabaseSessionService, InMemorySessionService
 from google.genai import types
-from utils.logger import get_service_logger
+from utils_app.logger import get_service_logger
 
 logger = get_service_logger("log_monitoring_runner")
 
@@ -145,8 +145,27 @@ async def _run_agent(
         new_message=content,
     ):
         if event.is_final_response():
-            if event.content and event.content.parts and event.content.parts[0].text:
-                return event.content.parts[0].text
+            if event.content and event.content.parts:
+                # Concatenate all text parts
+                full_text = "".join([p.text for p in event.content.parts if p.text])
+                
+                # Filter out technical markers and reasoning blocks
+                import re
+                
+                # Handle /*FINAL_ANSWER*/
+                full_text = full_text.replace("/*FINAL_ANSWER*/", "")
+                
+                # Handle /REASONING/ ... /FINAL_ANSWER/ blocks
+                full_text = re.sub(r'/REASONING/.*?/FINAL_ANSWER/', '', full_text, flags=re.DOTALL)
+                
+                # Handle standalone /REASONING/ or /FINAL_ANSWER/ tags
+                full_text = full_text.replace("/REASONING/", "").replace("/FINAL_ANSWER/", "")
+                
+                full_text = full_text.strip()
+                
+                if full_text:
+                    return full_text
+                    
             if event.actions and event.actions.escalate:
                 return (
                     f"Agent escalated: {event.error_message or 'No specific message.'}"
@@ -162,7 +181,7 @@ async def handle_agent_request(
     agent: LlmAgent,
     app_name: str = "log_monitoring_app",
     session_id: Optional[str] = None,
-) -> str:
+) -> tuple[str, str]:
     """
     Handle an agent request with proper session management.
 
@@ -196,4 +215,4 @@ async def handle_agent_request(
     response = await _run_agent(runner, user_id, session.id, query)
 
     logger.info(f"Agent request completed: user={user_id}")
-    return response
+    return response, session.id

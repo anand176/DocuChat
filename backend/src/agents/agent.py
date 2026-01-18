@@ -1,12 +1,12 @@
 """Root log monitoring agent configuration"""
 import google.genai.types as genai_types
-from src.agents1 import prompt
-from src.agents1.sub_agents import (
-    log_retrieve_agent,
-    log_analysis_agent,
+from agents import prompt
+from agents.sub_agents import (
+    log_analytics_agent,
     solution_agent,
+    knowledge_base_agent,
 )
-from src.core.config import config
+from core.config import config
 from google.adk.agents import Agent
 from google.adk.planners import PlanReActPlanner
 from google.adk.tools.agent_tool import AgentTool
@@ -18,9 +18,9 @@ log_monitoring_agent = Agent(
     planner=PlanReActPlanner(),
     instruction=prompt.INSTRUCTION,
     tools=[
-        AgentTool(agent=log_retrieve_agent, skip_summarization=False),
-        AgentTool(agent=log_analysis_agent, skip_summarization=False),
+        AgentTool(agent=log_analytics_agent, skip_summarization=False),
         AgentTool(agent=solution_agent, skip_summarization=False),
+        AgentTool(agent=knowledge_base_agent, skip_summarization=False),
     ],
     generate_content_config=genai_types.GenerateContentConfig(
         temperature=0.2,
