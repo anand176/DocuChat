@@ -11,7 +11,7 @@
 -  **Visual Insights**: Uses **Grafana** dashboards to visualize both metrics and log patterns for easier troubleshooting.
 -  **Automated Root Cause Analysis**: Specialized agents that detect anomalies and recommend actionable solutions.
 
-## 📸 Screenshots
+##  Screenshots
 
 - **AI Incident Assistant Chat Interface**
 
