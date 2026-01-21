@@ -9,7 +9,7 @@
 -  **Metric Monitoring**: Real-time tracking of container metrics and system health.
 -  **Deep Log Analysis**: Integrated with **Grafana Loki** to fetch, search, and analyze logs with high efficiency.
 -  **Visual Insights**: Uses **Grafana** dashboards to visualize both metrics and log patterns for easier troubleshooting.
--  **Automated Root Cause Analysis**: Specialized agents that detect anomalies and recommend actionable solutions.
+-  **Automated Root Cause Analysis**: Specialized agents that detect anomalies and recommend actionable solutions
 
 ##  Screenshots
 
