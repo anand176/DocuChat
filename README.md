@@ -13,7 +13,7 @@
 
 ##  Screenshots
 
-- **AI Incident Assistant Chat Interface**
+- **AI Incident Assistant Chat UI**
 
 ![alt text](image.png)
 - **Grafana Monitoring Dashboard**
