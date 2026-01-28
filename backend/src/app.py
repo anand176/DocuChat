@@ -12,6 +12,7 @@ load_dotenv()
 # Import the agents router
 from agents.backend import router as agents_router
 from login.backend import router as login_router
+from database.core import engine, Base
 
 app = FastAPI(title="Log Monitoring API", version="1.0.0")
 
@@ -27,7 +28,9 @@ app.add_middleware(
 # Include the agents router which contains the /log_monitoring endpoint
 app.include_router(agents_router)
 app.include_router(login_router)
-
+@app.on_event("startup")
+def startup():
+    Base.metadata.create_all(bind=engine)
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
