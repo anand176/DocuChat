@@ -14,7 +14,11 @@ from agents.backend import router as agents_router
 from login.backend import router as login_router
 from database.core import engine, Base
 
-app = FastAPI(title="Log Monitoring API", version="1.0.0")
+app = FastAPI(
+    title="Log Monitoring API", 
+    version="1.0.0",
+    swagger_ui_parameters={"persistAuthorization": True}
+)
 
 # CORS middleware
 app.add_middleware(

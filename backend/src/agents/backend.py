@@ -1,5 +1,5 @@
-from typing import Optional
-from fastapi import APIRouter, HTTPException, status
+from typing import Optional, Annotated
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 import logging
 
@@ -10,13 +10,19 @@ logger.setLevel(logging.INFO)
 # Create router
 router = APIRouter(prefix="/agents", tags=["Agents"])
 
+from login.dependencies import get_current_user
+from tables.auth import User
+
 class LogMonitoringRequest(BaseModel):
     query: str
     user_id: str = "default_user"
     session_id: Optional[str] = None
 
 @router.post("/log_monitoring")
-async def log_monitoring(req: LogMonitoringRequest):
+async def log_monitoring(
+    req: LogMonitoringRequest,
+    current_user: Annotated[User, Depends(get_current_user)]
+):
     """
     Comprehensive log monitoring endpoint.
     """
